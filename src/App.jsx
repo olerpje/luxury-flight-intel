@@ -76,7 +76,7 @@ function PricingModal({ onClose }) {
           <div style={{ border: "1px solid #c9a84c", padding: "28px", borderRadius: "2px", position: "relative" }}>
             <div style={{ position: "absolute", top: 0, right: 0, background: "#c9a84c", color: "#0a0a0a", fontSize: "9px", fontWeight: "800", padding: "4px 10px", letterSpacing: "0.1em" }}>POPULAR</div>
             <div style={{ fontSize: "10px", color: "#c9a84c", letterSpacing: "0.15em", marginBottom: "8px" }}>PRO</div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#c9a84c" }}>€12</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#c9a84c" }}>€9</div>
             <div style={{ fontSize: "11px", color: "#555", marginBottom: "20px" }}>per month</div>
             <div style={{ fontSize: "12px", color: "#888", lineHeight: "2" }}>
               ✦ All deals instantly<br />
@@ -96,7 +96,7 @@ function PricingModal({ onClose }) {
           <div style={{ border: "1px solid #444", padding: "28px", borderRadius: "2px", gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: "10px", color: "#888", letterSpacing: "0.15em", marginBottom: "4px" }}>ELITE</div>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#f0ece4" }}>€21 <span style={{ fontSize: "13px", color: "#555" }}>/ month</span></div>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#f0ece4" }}>€17 <span style={{ fontSize: "13px", color: "#555" }}>/ month</span></div>
               <div style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>Everything in Pro + error fares first, priority route requests, SMS alerts</div>
             </div>
             <button
