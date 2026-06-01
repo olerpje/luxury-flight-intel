@@ -56,7 +56,7 @@ function PricingModal({ onClose }) {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-          {/* Free */}
+          {/* Free Plan */}
           <div style={{ border: "1px solid #2a2a2a", padding: "28px", borderRadius: "2px" }}>
             <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.15em", marginBottom: "8px" }}>FREE</div>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#f0ece4" }}>€0</div>
@@ -72,7 +72,7 @@ function PricingModal({ onClose }) {
             </button>
           </div>
 
-          {/* Pro */}
+          {/* Pro Plan */}
           <div style={{ border: "1px solid #c9a84c", padding: "28px", borderRadius: "2px", position: "relative" }}>
             <div style={{ position: "absolute", top: 0, right: 0, background: "#c9a84c", color: "#0a0a0a", fontSize: "9px", fontWeight: "800", padding: "4px 10px", letterSpacing: "0.1em" }}>POPULAR</div>
             <div style={{ fontSize: "10px", color: "#c9a84c", letterSpacing: "0.15em", marginBottom: "8px" }}>PRO</div>
@@ -92,7 +92,7 @@ function PricingModal({ onClose }) {
             </button>
           </div>
 
-          {/* Elite - full width */}
+          {/* Elite Plan */}
           <div style={{ border: "1px solid #444", padding: "28px", borderRadius: "2px", gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: "10px", color: "#888", letterSpacing: "0.15em", marginBottom: "4px" }}>ELITE</div>
@@ -124,7 +124,9 @@ function DealCard({ deal, onAnalyze, onSubscribe }) {
     <div style={{ background: "linear-gradient(135deg, #141414 0%, #1c1c1c 100%)", border: `1px solid ${deal.isError ? "#c9a84c44" : "#2a2a2a"}`, borderRadius: "2px", padding: "28px", display: "flex", flexDirection: "column", gap: "16px", position: "relative", overflow: "hidden", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = deal.isError ? "#c9a84c88" : "#444"; }}
       onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = deal.isError ? "#c9a84c44" : "#2a2a2a"; }}>
+      
       {deal.isError && <div style={{ position: "absolute", top: 0, right: 0, background: "#c9a84c", color: "#0a0a0a", fontSize: "9px", fontWeight: "800", letterSpacing: "0.12em", padding: "4px 10px" }}>ERROR FARE</div>}
+      
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <div style={{ fontSize: "11px", color: "#666", letterSpacing: "0.1em", marginBottom: "4px" }}>{deal.airline.toUpperCase()} · {deal.cabin.toUpperCase()}</div>
@@ -146,11 +148,13 @@ function DealCard({ deal, onAnalyze, onSubscribe }) {
           <div style={{ display: "inline-block", background: "#1a2e1a", color: "#4ade80", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "2px", marginTop: "4px" }}>−{deal.savings}% OFF</div>
         </div>
       </div>
+      
       <div style={{ display: "flex", gap: "16px", fontSize: "11px", color: "#555" }}>
         <span>📅 {deal.dates}</span>
         <span>💺 {deal.seats} seat{deal.seats > 1 ? "s" : ""} left</span>
         <span style={{ color: isVeryUrgent ? "#ef4444" : urgency ? "#f59e0b" : "#555" }}>⏱ Expires in {deal.expiresIn}</span>
       </div>
+      
       <div style={{ display: "flex", gap: "10px" }}>
         <button onClick={() => onAnalyze(deal)}
           style={{ flex: 1, background: "transparent", border: "1px solid #c9a84c", color: "#c9a84c", padding: "10px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.1em", cursor: "pointer" }}
@@ -158,7 +162,7 @@ function DealCard({ deal, onAnalyze, onSubscribe }) {
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#c9a84c"; }}>
           AI ANALYSIS
         </button>
-        <button style={{ flex: 2, background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}
+        <button onClick={onSubscribe} style={{ flex: 2, background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}
           onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
           onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
           BOOK NOW →
@@ -252,7 +256,8 @@ function SearchDeals({ onResults }) {
       });
       const data = await response.json();
       const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
-      const clean = text.replace(/```json|```/g, "").trim();
+      const clean = text.replace(/```json|
+```/g, "").trim();
       const deals = JSON.parse(clean);
       onResults(deals.map((d, i) => ({ ...d, id: Date.now() + i })));
     } catch (e) { console.error(e); }
@@ -276,38 +281,38 @@ export default function App() {
   const [region, setRegion] = useState("All Regions");
   const [cabin, setCabin] = useState("All Classes");
   const [deals, setDeals] = useState(SAMPLE_DEALS);
-
-useEffect(() => {
-  fetch("/api/get-deals")
-    .then(r => r.json())
-    .then(data => {
-      if (data.deals && data.deals.length > 0) {
-        const formatted = data.deals.map(d => ({
-          id: d.id,
-          origin: d.origin,
-          originCity: d.origin_city,
-          dest: d.dest,
-          destCity: d.dest_city,
-          airline: d.airline,
-          cabin: d.cabin,
-          region: d.region,
-          normalPrice: d.normal_price,
-          dealPrice: d.deal_price,
-          savings: d.savings,
-          dates: d.dates,
-          seats: d.seats,
-          isError: d.is_error,
-          flag: d.flag,
-          expiresIn: d.expires_at,
-        }));
-        setDeals(formatted);
-      }
-    })
-    .catch(console.error);
-}, []);
   const [analyzingDeal, setAnalyzingDeal] = useState(null);
   const [searchDeals, setSearchDeals] = useState([]);
   const [showPricing, setShowPricing] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/get-deals")
+      .then(r => r.json())
+      .then(data => {
+        if (data.deals && data.deals.length > 0) {
+          const formatted = data.deals.map(d => ({
+            id: d.id,
+            origin: d.origin,
+            originCity: d.origin_city,
+            dest: d.dest,
+            destCity: d.dest_city,
+            airline: d.airline,
+            cabin: d.cabin,
+            region: d.region,
+            normalPrice: d.normal_price,
+            dealPrice: d.deal_price,
+            savings: d.savings,
+            dates: d.dates,
+            seats: d.seats,
+            isError: d.is_error,
+            flag: d.flag,
+            expiresIn: d.expires_at,
+          }));
+          setDeals(formatted);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -333,7 +338,7 @@ useEffect(() => {
         ::placeholder { color: #444; }
       `}</style>
 
-      <TickerBar />
+      <TickerBar/>
 
       <header style={{ borderBottom: "1px solid #1e1e1e", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
@@ -355,9 +360,9 @@ useEffect(() => {
         <p style={{ color: "#666", fontSize: "15px", maxWidth: "480px", margin: "0 auto 36px", lineHeight: 1.7 }}>
           We surface error fares, flash sales, and hidden deals on lie-flat seats worldwide. Every deal analyzed by AI.
         </p>
-        <SearchDeals onResults={results => setSearchDeals(results)} />
+        <SearchDeals onResults="{results"> setSearchDeals(results)} />
         <div style={{ display: "flex", gap: "32px", justifyContent: "center", marginTop: "40px", fontSize: "12px", color: "#444" }}>
-          <span>✦ {SAMPLE_DEALS.length} Active Deals</span>
+          <span>✦ {allDeals.length} Active Deals</span>
           <span>✦ 44+ Airports Monitored</span>
           <span>✦ Mistake Fares Included</span>
         </div>
@@ -382,7 +387,10 @@ useEffect(() => {
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
-          {filtered.map(deal => <DealCard key={deal.id} deal={deal} onAnalyze={setAnalyzingDeal} onSubscribe={() => setShowPricing(true)} />)}
+          {filtered.map(deal => (
+            <DealCard key="{deal.id}" deal="{deal}" onAnalyze="{setAnalyzingDeal}" onSubscribe="{()"> setShowPricing(true)} 
+            />
+          ))}
         </div>
       </div>
 
@@ -394,8 +402,8 @@ useEffect(() => {
         </div>
       </footer>
 
-      {analyzingDeal && <AIPanel deal={analyzingDeal} onClose={() => setAnalyzingDeal(null)} />}
-      {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
+      {analyzingDeal && <AIPanel deal="{analyzingDeal}" onClose="{()"> setAnalyzingDeal(null)} />}
+      {showPricing && <PricingModal onClose="{()"> setShowPricing(false)} />}
     </div>
   );
 }
