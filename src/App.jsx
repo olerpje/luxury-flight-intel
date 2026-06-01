@@ -1,19 +1,152 @@
-import { useState, useEffect } from "react";
+bash
+
+cat > /mnt/user-data/outputs/App.jsx << 'ENDOFFILE'
+import { useState, useEffect, useRef } from "react";
+
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
 const REGIONS = ["All Regions", "North America", "Europe", "Asia & Pacific", "Middle East", "Latin America", "Africa"];
 const CABINS = ["All Classes", "Business Class", "First Class", "Premium Economy"];
 
-const PRO_PRICE_ID = "price_1TdTCBEcQx0DO13wgjKNaEoi";
+const PRO_PRICE_ID = "price_1TdVArEcQx0DO13we6UF5sf8";
 const ELITE_PRICE_ID = "price_1TdTCxEcQx0DO13wlxlp9gOe";
 
 const SAMPLE_DEALS = [
-  { id: 1, origin: "JFK", originCity: "New York", dest: "LHR", destCity: "London", airline: "British Airways", cabin: "Business Class", region: "Europe", normalPrice: 4800, dealPrice: 1290, savings: 73, dates: "Sep 12 – Sep 26", seats: 3, isError: true, flag: "🇬🇧", expiresIn: "4h 12m" },
-  { id: 2, origin: "LAX", originCity: "Los Angeles", dest: "SIN", destCity: "Singapore", airline: "Singapore Airlines", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 6200, dealPrice: 1890, savings: 70, dates: "Oct 3 – Oct 18", seats: 6, isError: false, flag: "🇸🇬", expiresIn: "2d 6h" },
-  { id: 3, origin: "LHR", originCity: "London", dest: "DXB", destCity: "Dubai", airline: "Emirates", cabin: "First Class", region: "Middle East", normalPrice: 9500, dealPrice: 2100, savings: 78, dates: "Nov 1 – Nov 10", seats: 2, isError: true, flag: "🇦🇪", expiresIn: "1h 30m" },
-  { id: 4, origin: "CDG", originCity: "Paris", dest: "NRT", destCity: "Tokyo", airline: "Air France", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 5400, dealPrice: 1650, savings: 69, dates: "Oct 20 – Nov 4", seats: 8, isError: false, flag: "🇯🇵", expiresIn: "3d 14h" },
-  { id: 5, origin: "ORD", originCity: "Chicago", dest: "GRU", destCity: "São Paulo", airline: "LATAM", cabin: "Business Class", region: "Latin America", normalPrice: 3900, dealPrice: 980, savings: 75, dates: "Sep 28 – Oct 12", seats: 4, isError: false, flag: "🇧🇷", expiresIn: "18h 45m" },
-  { id: 6, origin: "SYD", originCity: "Sydney", dest: "JFK", destCity: "New York", airline: "Qantas", cabin: "First Class", region: "Asia & Pacific", normalPrice: 12000, dealPrice: 3200, savings: 73, dates: "Dec 1 – Dec 16", seats: 1, isError: true, flag: "🇺🇸", expiresIn: "55m" },
+  { id: 1, origin: "AMS", originCity: "Amsterdam", dest: "BKK", destCity: "Bangkok", airline: "Qatar Airways", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 4200, dealPrice: 1845, savings: 56, dates: "Sep 15 – Oct 10", seats: 4, isError: false, flag: "🇹🇭", expiresIn: "1d 12h", sourceUrl: "https://www.secretflying.com" },
+  { id: 2, origin: "CDG", originCity: "Paris", dest: "BKK", destCity: "Bangkok", airline: "Etihad Airways", cabin: "First Class", region: "Asia & Pacific", normalPrice: 8500, dealPrice: 3780, savings: 55, dates: "Nov 03 – Nov 18", seats: 2, isError: false, flag: "🇹🇭", expiresIn: "8h 45m", sourceUrl: "https://www.secretflying.com" },
+  { id: 3, origin: "YYZ", originCity: "Toronto", dest: "CDG", destCity: "Paris", airline: "Air France", cabin: "Business Class", region: "Europe", normalPrice: 5100, dealPrice: 2315, savings: 54, dates: "Oct 12 – Oct 26", seats: 5, isError: false, flag: "🇫🇷", expiresIn: "2d 0h", sourceUrl: "https://www.theflightdeal.com" },
+  { id: 4, origin: "LIS", originCity: "Lisbon", dest: "DEL", destCity: "Delhi", airline: "Air India", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 3800, dealPrice: 1490, savings: 60, dates: "Sep 22 – Oct 08", seats: 3, isError: false, flag: "🇮🇳", expiresIn: "14h 20m", sourceUrl: "https://www.secretflying.com" },
+  { id: 5, origin: "LUX", originCity: "Luxembourg", dest: "MNL", destCity: "Manila", airline: "Lufthansa", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 4600, dealPrice: 1850, savings: 59, dates: "Oct 05 – Oct 20", seats: 3, isError: true, flag: "🇵🇭", expiresIn: "4h 15m", sourceUrl: "https://www.theflightdeal.com" },
+  { id: 6, origin: "VIE", originCity: "Vienna", dest: "BOM", destCity: "Mumbai", airline: "Air France", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 3400, dealPrice: 1120, savings: 67, dates: "Jan 10 – Jan 25", seats: 1, isError: true, flag: "🇮🇳", expiresIn: "1h 05m", sourceUrl: "https://www.secretflying.com" }
 ];
+
+// ─── Supabase helpers ────────────────────────────────────────────────────────
+
+async function supabaseFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
+    ...options,
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${options.token || SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+  return res;
+}
+
+async function signUp(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: "POST",
+    headers: { "apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return res.json();
+}
+
+async function signIn(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { "apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return res.json();
+}
+
+async function signOut(token) {
+  await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+    method: "POST",
+    headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}` },
+  });
+}
+
+// ─── Auth Modal ──────────────────────────────────────────────────────────────
+
+function AuthModal({ onClose, onAuth }) {
+  const [mode, setMode] = useState("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit() {
+    if (!email || !password) return;
+    setLoading(true);
+    setError("");
+    try {
+      const data = mode === "signin" ? await signIn(email, password) : await signUp(email, password);
+      if (data.access_token) {
+        localStorage.setItem("lfi_token", data.access_token);
+        localStorage.setItem("lfi_user", JSON.stringify(data.user));
+        onAuth(data.user, data.access_token);
+        onClose();
+      } else {
+        setError(data.error_description || data.msg || "Something went wrong");
+      }
+    } catch (e) {
+      setError("Connection error. Please try again.");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", backdropFilter: "blur(12px)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: "#0f0f0f", border: "1px solid #c9a84c44", borderRadius: "2px", width: "100%", maxWidth: "420px", padding: "44px" }}>
+        <div style={{ textAlign: "center", marginBottom: "36px" }}>
+          <div style={{ fontSize: "10px", color: "#c9a84c", letterSpacing: "0.2em", marginBottom: "8px" }}>✦ LUXURY FLIGHT INTEL ✦</div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "26px", color: "#f0ece4" }}>
+            {mode === "signin" ? "Welcome Back" : "Create Account"}
+          </div>
+          <div style={{ color: "#444", fontSize: "12px", marginTop: "8px" }}>
+            {mode === "signin" ? "Sign in to access your deals" : "Join thousands of premium travelers"}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <input
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleSubmit()}
+            style={{ background: "#141414", border: "1px solid #2a2a2a", color: "#f0ece4", padding: "14px 16px", fontSize: "13px", outline: "none", borderRadius: "2px", fontFamily: "Georgia, serif" }}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleSubmit()}
+            style={{ background: "#141414", border: "1px solid #2a2a2a", color: "#f0ece4", padding: "14px 16px", fontSize: "13px", outline: "none", borderRadius: "2px", fontFamily: "Georgia, serif" }}
+          />
+          {error && <div style={{ color: "#ef4444", fontSize: "12px", padding: "10px", background: "#1a0000", border: "1px solid #ef444433", borderRadius: "2px" }}>{error}</div>}
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{ background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "14px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, borderRadius: "2px" }}>
+            {loading ? "PLEASE WAIT..." : mode === "signin" ? "SIGN IN →" : "CREATE ACCOUNT →"}
+          </button>
+        </div>
+
+        <div style={{ textAlign: "center", marginTop: "24px", fontSize: "12px", color: "#444" }}>
+          {mode === "signin" ? (
+            <>Don't have an account?{" "}
+              <span style={{ color: "#c9a84c", cursor: "pointer" }} onClick={() => { setMode("signup"); setError(""); }}>Sign up free</span>
+            </>
+          ) : (
+            <>Already have an account?{" "}
+              <span style={{ color: "#c9a84c", cursor: "pointer" }} onClick={() => { setMode("signin"); setError(""); }}>Sign in</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Ticker ──────────────────────────────────────────────────────────────────
 
 function TickerBar() {
   const items = ["🔥 ERROR FARE: Emirates First Class LHR→DXB — $2,100 (78% off)", "⚡ NEW: Singapore Airlines Biz JFK→SIN — $1,890", "🚨 LAST SEAT: Qantas First SYD→JFK — $3,200", "💺 British Airways Biz JFK→LHR — $1,290 (73% off)", "🌏 Air France Biz CDG→NRT — €1,650"];
@@ -26,10 +159,13 @@ function TickerBar() {
   );
 }
 
-function PricingModal({ onClose }) {
+// ─── Pricing Modal ───────────────────────────────────────────────────────────
+
+function PricingModal({ onClose, user, onAuthRequired }) {
   const [loading, setLoading] = useState(null);
 
   async function subscribe(priceId, plan) {
+    if (!user) { onClose(); onAuthRequired(); return; }
     setLoading(plan);
     try {
       const res = await fetch("/api/stripe-checkout", {
@@ -54,129 +190,147 @@ function PricingModal({ onClose }) {
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "28px", color: "#f0ece4" }}>Choose Your Plan</div>
           <div style={{ color: "#555", fontSize: "13px", marginTop: "8px" }}>Cancel anytime. No hidden fees.</div>
         </div>
-
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-          {/* Free Plan */}
           <div style={{ border: "1px solid #2a2a2a", padding: "28px", borderRadius: "2px" }}>
             <div style={{ fontSize: "10px", color: "#555", letterSpacing: "0.15em", marginBottom: "8px" }}>FREE</div>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#f0ece4" }}>€0</div>
             <div style={{ fontSize: "11px", color: "#555", marginBottom: "20px" }}>forever</div>
             <div style={{ fontSize: "12px", color: "#666", lineHeight: "2" }}>
-              ✦ 2–3 deals per week<br />
-              ✦ 48h delayed alerts<br />
-              ✦ Basic filtering<br />
-              ✦ No AI analysis
+              ✦ 2–3 deals per week<br />✦ 48h delayed alerts<br />✦ Basic filtering<br />✦ No AI analysis
             </div>
             <button onClick={onClose} style={{ marginTop: "24px", width: "100%", background: "transparent", border: "1px solid #333", color: "#555", padding: "10px", fontSize: "11px", letterSpacing: "0.1em", cursor: "pointer" }}>
               CONTINUE FREE
             </button>
           </div>
-
-          {/* Pro Plan */}
           <div style={{ border: "1px solid #c9a84c", padding: "28px", borderRadius: "2px", position: "relative" }}>
             <div style={{ position: "absolute", top: 0, right: 0, background: "#c9a84c", color: "#0a0a0a", fontSize: "9px", fontWeight: "800", padding: "4px 10px", letterSpacing: "0.1em" }}>POPULAR</div>
             <div style={{ fontSize: "10px", color: "#c9a84c", letterSpacing: "0.15em", marginBottom: "8px" }}>PRO</div>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#c9a84c" }}>€9</div>
             <div style={{ fontSize: "11px", color: "#555", marginBottom: "20px" }}>per month</div>
             <div style={{ fontSize: "12px", color: "#888", lineHeight: "2" }}>
-              ✦ All deals instantly<br />
-              ✦ AI deal analysis<br />
-              ✦ Email alerts<br />
-              ✦ All regions & cabins
+              ✦ All deals instantly<br />✦ AI deal analysis<br />✦ Email alerts<br />✦ All regions & cabins
             </div>
-            <button
-              onClick={() => subscribe(PRO_PRICE_ID, "pro")}
-              disabled={loading === "pro"}
+            <button onClick={() => subscribe(PRO_PRICE_ID, "pro")} disabled={loading === "pro"}
               style={{ marginTop: "24px", width: "100%", background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}>
               {loading === "pro" ? "LOADING..." : "GET PRO →"}
             </button>
           </div>
-
-          {/* Elite Plan */}
           <div style={{ border: "1px solid #444", padding: "28px", borderRadius: "2px", gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: "10px", color: "#888", letterSpacing: "0.15em", marginBottom: "4px" }}>ELITE</div>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#f0ece4" }}>€17 <span style={{ fontSize: "13px", color: "#555" }}>/ month</span></div>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#f0ece4" }}>€21 <span style={{ fontSize: "13px", color: "#555" }}>/ month</span></div>
               <div style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>Everything in Pro + error fares first, priority route requests, SMS alerts</div>
             </div>
-            <button
-              onClick={() => subscribe(ELITE_PRICE_ID, "elite")}
-              disabled={loading === "elite"}
+            <button onClick={() => subscribe(ELITE_PRICE_ID, "elite")} disabled={loading === "elite"}
               style={{ background: "transparent", border: "1px solid #c9a84c", color: "#c9a84c", padding: "12px 24px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer", whiteSpace: "nowrap" }}>
               {loading === "elite" ? "LOADING..." : "GET ELITE →"}
             </button>
           </div>
         </div>
-
-        <div style={{ textAlign: "center", fontSize: "11px", color: "#333" }}>
-          Secured by Stripe · Cancel anytime · No contracts
-        </div>
+        <div style={{ textAlign: "center", fontSize: "11px", color: "#333" }}>Secured by Stripe · Cancel anytime · No contracts</div>
       </div>
     </div>
   );
 }
 
-function DealCard({ deal, onAnalyze, onSubscribe }) {
-  const urgency = deal.expiresIn.includes("m") && !deal.expiresIn.includes("d") && !deal.expiresIn.includes("h");
+// ─── Deal Card ───────────────────────────────────────────────────────────────
+
+function DealCard({ deal, onAnalyze, onSubscribe, blurred, onAuthRequired }) {
   const isVeryUrgent = deal.seats <= 2;
 
+  function handleBook() {
+    if (blurred) { onSubscribe(); return; }
+    const url = deal.sourceUrl || deal.source_url;
+    if (url) window.open(url, "_blank");
+    else onSubscribe();
+  }
+
   return (
-    <div style={{ background: "linear-gradient(135deg, #141414 0%, #1c1c1c 100%)", border: `1px solid ${deal.isError ? "#c9a84c44" : "#2a2a2a"}`, borderRadius: "2px", padding: "28px", display: "flex", flexDirection: "column", gap: "16px", position: "relative", overflow: "hidden", transition: "transform 0.2s, border-color 0.2s", cursor: "pointer" }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = deal.isError ? "#c9a84c88" : "#444"; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = deal.isError ? "#c9a84c44" : "#2a2a2a"; }}>
-      
-      {deal.isError && <div style={{ position: "absolute", top: 0, right: 0, background: "#c9a84c", color: "#0a0a0a", fontSize: "9px", fontWeight: "800", letterSpacing: "0.12em", padding: "4px 10px" }}>ERROR FARE</div>}
-      
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ fontSize: "11px", color: "#666", letterSpacing: "0.1em", marginBottom: "4px" }}>{deal.airline.toUpperCase()} · {deal.cabin.toUpperCase()}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div>
-              <div style={{ fontSize: "28px", fontFamily: "'Playfair Display', Georgia, serif", color: "#f0ece4", lineHeight: 1 }}>{deal.origin}</div>
-              <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>{deal.originCity}</div>
-            </div>
-            <div style={{ color: "#c9a84c", fontSize: "18px" }}>→</div>
-            <div>
-              <div style={{ fontSize: "28px", fontFamily: "'Playfair Display', Georgia, serif", color: "#f0ece4", lineHeight: 1 }}>{deal.dest} {deal.flag}</div>
-              <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>{deal.destCity}</div>
+    <div style={{ position: "relative" }}>
+      <div
+        style={{
+          background: "linear-gradient(135deg, #141414 0%, #1c1c1c 100%)",
+          border: `1px solid ${deal.isError ? "#c9a84c44" : "#2a2a2a"}`,
+          borderRadius: "2px", padding: "28px", display: "flex", flexDirection: "column", gap: "16px",
+          position: "relative", overflow: "hidden", transition: "transform 0.2s, border-color 0.2s",
+          cursor: "pointer",
+          filter: blurred ? "blur(4px)" : "none",
+          userSelect: blurred ? "none" : "auto",
+          pointerEvents: blurred ? "none" : "auto",
+        }}
+        onMouseEnter={e => { if (!blurred) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = deal.isError ? "#c9a84c88" : "#444"; }}}
+        onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = deal.isError ? "#c9a84c44" : "#2a2a2a"; }}>
+
+        {deal.isError && <div style={{ position: "absolute", top: 0, right: 0, background: "#c9a84c", color: "#0a0a0a", fontSize: "9px", fontWeight: "800", letterSpacing: "0.12em", padding: "4px 10px" }}>ERROR FARE</div>}
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontSize: "11px", color: "#666", letterSpacing: "0.1em", marginBottom: "4px" }}>{deal.airline.toUpperCase()} · {deal.cabin.toUpperCase()}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div>
+                <div style={{ fontSize: "28px", fontFamily: "'Playfair Display', Georgia, serif", color: "#f0ece4", lineHeight: 1 }}>{deal.origin}</div>
+                <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>{deal.originCity}</div>
+              </div>
+              <div style={{ color: "#c9a84c", fontSize: "18px" }}>→</div>
+              <div>
+                <div style={{ fontSize: "28px", fontFamily: "'Playfair Display', Georgia, serif", color: "#f0ece4", lineHeight: 1 }}>{deal.dest} {deal.flag}</div>
+                <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>{deal.destCity}</div>
+              </div>
             </div>
           </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "11px", color: "#666", textDecoration: "line-through" }}>${deal.normalPrice?.toLocaleString()}</div>
+            <div style={{ fontSize: "32px", fontFamily: "'Playfair Display', Georgia, serif", color: "#c9a84c", lineHeight: 1 }}>${deal.dealPrice?.toLocaleString()}</div>
+            <div style={{ display: "inline-block", background: "#1a2e1a", color: "#4ade80", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "2px", marginTop: "4px" }}>−{deal.savings}% OFF</div>
+          </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "11px", color: "#666", textDecoration: "line-through" }}>${deal.normalPrice.toLocaleString()}</div>
-          <div style={{ fontSize: "32px", fontFamily: "'Playfair Display', Georgia, serif", color: "#c9a84c", lineHeight: 1 }}>${deal.dealPrice.toLocaleString()}</div>
-          <div style={{ display: "inline-block", background: "#1a2e1a", color: "#4ade80", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "2px", marginTop: "4px" }}>−{deal.savings}% OFF</div>
+
+        <div style={{ display: "flex", gap: "16px", fontSize: "11px", color: "#555" }}>
+          <span>📅 {deal.dates}</span>
+          <span>💺 {deal.seats} seat{deal.seats > 1 ? "s" : ""} left</span>
+          <span style={{ color: isVeryUrgent ? "#ef4444" : "#555" }}>⏱ Expires in {deal.expiresIn}</span>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button onClick={() => onAnalyze(deal)}
+            style={{ flex: 1, background: "transparent", border: "1px solid #c9a84c", color: "#c9a84c", padding: "10px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.1em", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#c9a84c"; e.currentTarget.style.color = "#0a0a0a"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#c9a84c"; }}>
+            AI ANALYSIS
+          </button>
+          <button onClick={handleBook}
+            style={{ flex: 2, background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}
+            onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
+            onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+            BOOK NOW →
+          </button>
         </div>
       </div>
-      
-      <div style={{ display: "flex", gap: "16px", fontSize: "11px", color: "#555" }}>
-        <span>📅 {deal.dates}</span>
-        <span>💺 {deal.seats} seat{deal.seats > 1 ? "s" : ""} left</span>
-        <span style={{ color: isVeryUrgent ? "#ef4444" : urgency ? "#f59e0b" : "#555" }}>⏱ Expires in {deal.expiresIn}</span>
-      </div>
-      
-      <div style={{ display: "flex", gap: "10px" }}>
-        <button onClick={() => onAnalyze(deal)}
-          style={{ flex: 1, background: "transparent", border: "1px solid #c9a84c", color: "#c9a84c", padding: "10px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.1em", cursor: "pointer" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#c9a84c"; e.currentTarget.style.color = "#0a0a0a"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#c9a84c"; }}>
-          AI ANALYSIS
-        </button>
-        <button onClick={onSubscribe} style={{ flex: 2, background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}
-          onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
-          onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-          BOOK NOW →
-        </button>
-      </div>
+
+      {/* Blur overlay for free users */}
+      {blurred && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", zIndex: 10 }}>
+          <div style={{ fontSize: "20px" }}>🔒</div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "15px", color: "#f0ece4", textAlign: "center" }}>Pro Deal</div>
+          <div style={{ fontSize: "11px", color: "#888", textAlign: "center", maxWidth: "160px", lineHeight: 1.5 }}>Upgrade to see all deals instantly</div>
+          <button onClick={onSubscribe}
+            style={{ background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "8px 20px", fontSize: "10px", fontWeight: "800", letterSpacing: "0.12em", cursor: "pointer", borderRadius: "2px" }}>
+            UNLOCK →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function AIPanel({ deal, onClose }) {
+// ─── AI Panel ────────────────────────────────────────────────────────────────
+
+function AIPanel({ deal, onClose, user, onAuthRequired }) {
   const [analysis, setAnalysis] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) { onClose(); onAuthRequired(); return; }
     async function analyze() {
       setLoading(true);
       try {
@@ -187,7 +341,7 @@ function AIPanel({ deal, onClose }) {
             model: "claude-sonnet-4-5",
             max_tokens: 1000,
             tools: [{ type: "web_search_20250305", name: "web_search" }],
-            system: `You are an elite luxury travel analyst. Analyze business and first class fare deals with expert precision. Be concise and authoritative. Use ✦ as bullet points. Use ALL CAPS for section titles followed by a colon. Never use markdown #.`,
+            system: "You are an elite luxury travel analyst. Analyze business and first class fare deals with expert precision. Be concise and authoritative. Use ✦ as bullet points. Use ALL CAPS for section titles followed by a colon. Never use markdown #.",
             messages: [{ role: "user", content: `Analyze this flight deal: Airline: ${deal.airline}, Route: ${deal.originCity} (${deal.origin}) → ${deal.destCity} (${deal.dest}), Cabin: ${deal.cabin}, Deal Price: $${deal.dealPrice}, Normal Price: $${deal.normalPrice}, Savings: ${deal.savings}%, Dates: ${deal.dates}, Seats: ${deal.seats}, Error Fare: ${deal.isError}, Expires: ${deal.expiresIn}. Provide: 1. VERDICT 2. DEAL QUALITY 3. WHAT YOU GET 4. WATCH OUT FOR 5. ACT NOW IF` }]
           })
         });
@@ -215,7 +369,7 @@ function AIPanel({ deal, onClose }) {
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#666", fontSize: "22px", cursor: "pointer" }}>×</button>
         </div>
         <div style={{ display: "flex", gap: "20px", marginBottom: "28px", padding: "16px", background: "#141414", borderRadius: "2px" }}>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: "24px", fontFamily: "'Playfair Display', Georgia, serif", color: "#c9a84c" }}>${deal.dealPrice.toLocaleString()}</div><div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>DEAL PRICE</div></div>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: "24px", fontFamily: "'Playfair Display', Georgia, serif", color: "#c9a84c" }}>${deal.dealPrice?.toLocaleString()}</div><div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>DEAL PRICE</div></div>
           <div style={{ width: "1px", background: "#2a2a2a" }} />
           <div style={{ textAlign: "center" }}><div style={{ fontSize: "24px", fontFamily: "'Playfair Display', Georgia, serif", color: "#4ade80" }}>−{deal.savings}%</div><div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>SAVINGS</div></div>
           <div style={{ width: "1px", background: "#2a2a2a" }} />
@@ -235,6 +389,8 @@ function AIPanel({ deal, onClose }) {
   );
 }
 
+// ─── Search ──────────────────────────────────────────────────────────────────
+
 function SearchDeals({ onResults }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -248,19 +404,22 @@ function SearchDeals({ onResults }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-5",
-          max_tokens: 1000,
+          max_tokens: 1200,
           tools: [{ type: "web_search_20250305", name: "web_search" }],
-          system: `You are a luxury flight deals researcher. Return ONLY a JSON array (no markdown) of deals: [{"id":number,"origin":"IATA","originCity":"City","dest":"IATA","destCity":"City","airline":"Name","cabin":"Business Class","region":"Europe","normalPrice":number,"dealPrice":number,"savings":number,"dates":"Month DD – Month DD","seats":number,"isError":boolean,"flag":"emoji","expiresIn":"Xh Xm"}]`,
-          messages: [{ role: "user", content: `Find business or first class flight deals for: ${query}` }]
+          system: `You are an elite live flight tracker. Search the web for real current premium cabin flight deals.
+Output ONLY a valid JSON array (no markdown, no explanation) in this exact format:
+[{"id":1,"origin":"JFK","originCity":"New York","dest":"LHR","destCity":"London","airline":"British Airways","cabin":"Business Class","region":"Europe","normalPrice":4500,"dealPrice":1290,"savings":71,"dates":"Sep 12 – Sep 26","seats":3,"isError":true,"flag":"🇬🇧","expiresIn":"4h 12m","sourceUrl":"https://www.secretflying.com"}]`,
+          messages: [{ role: "user", content: `Search for current premium cabin flight deals: ${query}` }]
         })
       });
       const data = await response.json();
       const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
-      const clean = text.replace(/```json|
-```/g, "").trim();
+      const clean = text.replace(/```json|```/g, "").trim();
       const deals = JSON.parse(clean);
       onResults(deals.map((d, i) => ({ ...d, id: Date.now() + i })));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      alert("Search failed. Please try again.");
+    }
     setLoading(false);
   }
 
@@ -277,6 +436,8 @@ function SearchDeals({ onResults }) {
   );
 }
 
+// ─── App ─────────────────────────────────────────────────────────────────────
+
 export default function App() {
   const [region, setRegion] = useState("All Regions");
   const [cabin, setCabin] = useState("All Classes");
@@ -284,7 +445,23 @@ export default function App() {
   const [analyzingDeal, setAnalyzingDeal] = useState(null);
   const [searchDeals, setSearchDeals] = useState([]);
   const [showPricing, setShowPricing] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
 
+  // Restore session
+  useEffect(() => {
+    try {
+      const savedToken = localStorage.getItem("lfi_token");
+      const savedUser = localStorage.getItem("lfi_user");
+      if (savedToken && savedUser) {
+        setToken(savedToken);
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (e) {}
+  }, []);
+
+  // Load deals from Supabase
   useEffect(() => {
     fetch("/api/get-deals")
       .then(r => r.json())
@@ -307,6 +484,7 @@ export default function App() {
             isError: d.is_error,
             flag: d.flag,
             expiresIn: d.expires_at,
+            sourceUrl: d.source_url,
           }));
           setDeals(formatted);
         }
@@ -314,6 +492,7 @@ export default function App() {
       .catch(console.error);
   }, []);
 
+  // Stripe success
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "true") {
@@ -322,8 +501,23 @@ export default function App() {
     }
   }, []);
 
+  async function handleSignOut() {
+    if (token) await signOut(token);
+    localStorage.removeItem("lfi_token");
+    localStorage.removeItem("lfi_user");
+    setUser(null);
+    setToken(null);
+  }
+
+  const isPro = !!user; // In production: check user's Stripe subscription tier in Supabase
   const allDeals = [...searchDeals, ...deals];
-  const filtered = allDeals.filter(d => (region === "All Regions" || d.region === region) && (cabin === "All Classes" || d.cabin === cabin));
+  const filtered = allDeals.filter(d =>
+    (region === "All Regions" || d.region === region) &&
+    (cabin === "All Classes" || d.cabin === cabin)
+  );
+
+  // Free users see first 2 deals, rest blurred
+  const FREE_LIMIT = 2;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
@@ -338,17 +532,27 @@ export default function App() {
         ::placeholder { color: #444; }
       `}</style>
 
-      <TickerBar/>
+      <TickerBar />
 
       <header style={{ borderBottom: "1px solid #1e1e1e", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: "10px", letterSpacing: "0.25em", color: "#c9a84c", marginBottom: "2px" }}>✦ EXCLUSIVE ✦</div>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "26px", letterSpacing: "0.05em" }}>LUXURY FLIGHT INTEL</div>
         </div>
-        <div style={{ display: "flex", gap: "24px", fontSize: "11px", letterSpacing: "0.1em", color: "#555" }}>
+        <div style={{ display: "flex", gap: "24px", fontSize: "11px", letterSpacing: "0.1em", color: "#555", alignItems: "center" }}>
           <span style={{ cursor: "pointer" }}>ABOUT</span>
           <span style={{ cursor: "pointer", color: "#c9a84c" }} onClick={() => setShowPricing(true)}>PRICING</span>
-          <span style={{ border: "1px solid #c9a84c", color: "#c9a84c", padding: "6px 16px", cursor: "pointer" }} onClick={() => setShowPricing(true)}>SUBSCRIBE</span>
+          {user ? (
+            <>
+              <span style={{ color: "#666" }}>{user.email?.split("@")[0].toUpperCase()}</span>
+              <span style={{ border: "1px solid #444", color: "#666", padding: "6px 16px", cursor: "pointer" }} onClick={handleSignOut}>SIGN OUT</span>
+            </>
+          ) : (
+            <>
+              <span style={{ cursor: "pointer" }} onClick={() => setShowAuth(true)}>SIGN IN</span>
+              <span style={{ border: "1px solid #c9a84c", color: "#c9a84c", padding: "6px 16px", cursor: "pointer" }} onClick={() => setShowPricing(true)}>SUBSCRIBE</span>
+            </>
+          )}
         </div>
       </header>
 
@@ -360,7 +564,7 @@ export default function App() {
         <p style={{ color: "#666", fontSize: "15px", maxWidth: "480px", margin: "0 auto 36px", lineHeight: 1.7 }}>
           We surface error fares, flash sales, and hidden deals on lie-flat seats worldwide. Every deal analyzed by AI.
         </p>
-        <SearchDeals onResults="{results"> setSearchDeals(results)} />
+        <SearchDeals onResults={results => setSearchDeals(results)} />
         <div style={{ display: "flex", gap: "32px", justifyContent: "center", marginTop: "40px", fontSize: "12px", color: "#444" }}>
           <span>✦ {allDeals.length} Active Deals</span>
           <span>✦ 44+ Airports Monitored</span>
@@ -381,18 +585,28 @@ export default function App() {
       <div style={{ padding: "40px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
           <div style={{ fontSize: "11px", color: "#555", letterSpacing: "0.1em" }}>{filtered.length} DEAL{filtered.length !== 1 ? "S" : ""} FOUND</div>
-          <div style={{ fontSize: "11px", color: "#555", display: "flex", gap: "6px", alignItems: "center" }}>
-            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#c9a84c", display: "inline-block", animation: "spin 3s linear infinite" }} />
-            LIVE MONITORING
+          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            {!isPro && (
+              <div style={{ fontSize: "11px", color: "#c9a84c", cursor: "pointer" }} onClick={() => setShowPricing(true)}>
+                🔒 {filtered.length - FREE_LIMIT > 0 ? `${filtered.length - FREE_LIMIT} deals hidden` : ""} — Upgrade to Pro
+              </div>
+            )}
+            <div style={{ fontSize: "11px", color: "#555", display: "flex", gap: "6px", alignItems: "center" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#c9a84c", display: "inline-block", animation: "spin 3s linear infinite" }} />
+              LIVE MONITORING
+            </div>
           </div>
         </div>
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
-          {filtered.map(deal => (
-            <DealCard 
-              key={deal.id} 
-              deal={deal} 
-              onAnalyze={setAnalyzingDeal} 
-              onSubscribe={() => setShowPricing(true)} 
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
+          {filtered.map((deal, i) => (
+            <DealCard
+              key={deal.id}
+              deal={deal}
+              onAnalyze={setAnalyzingDeal}
+              onSubscribe={() => setShowPricing(true)}
+              onAuthRequired={() => setShowAuth(true)}
+              blurred={!isPro && i >= FREE_LIMIT}
             />
           ))}
         </div>
@@ -406,8 +620,11 @@ export default function App() {
         </div>
       </footer>
 
-      {analyzingDeal && <AIPanel deal={analyzingDeal} onClose={() => setAnalyzingDeal(null)} />}
-      {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
+      {analyzingDeal && <AIPanel deal={analyzingDeal} onClose={() => setAnalyzingDeal(null)} user={user} onAuthRequired={() => setShowAuth(true)} />}
+      {showPricing && <PricingModal onClose={() => setShowPricing(false)} user={user} onAuthRequired={() => setShowAuth(true)} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} onAuth={(u, t) => { setUser(u); setToken(t); }} />}
     </div>
   );
 }
+ENDOFFILE
+echo "Done"
