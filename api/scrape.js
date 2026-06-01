@@ -2,11 +2,9 @@
 import RSSParser from "rss-parser";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
-
+const supabaseUrl = process.env.SUPABASE_URL || "MISSING";
+const supabaseKey = process.env.SUPABASE_ANON_KEY || "MISSING";
+const supabase = createClient(supabaseUrl, supabaseKey);
 const parser = new RSSParser();
 
 const RSS_FEEDS = [
