@@ -386,9 +386,13 @@ export default function App() {
             LIVE MONITORING
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
           {filtered.map(deal => (
-            <DealCard key="{deal.id}" deal="{deal}" onAnalyze="{setAnalyzingDeal}" onSubscribe="{()"> setShowPricing(true)} 
+            <DealCard 
+              key={deal.id} 
+              deal={deal} 
+              onAnalyze={setAnalyzingDeal} 
+              onSubscribe={() => setShowPricing(true)} 
             />
           ))}
         </div>
@@ -402,8 +406,8 @@ export default function App() {
         </div>
       </footer>
 
-      {analyzingDeal && <AIPanel deal="{analyzingDeal}" onClose="{()"> setAnalyzingDeal(null)} />}
-      {showPricing && <PricingModal onClose="{()"> setShowPricing(false)} />}
+      {analyzingDeal && <AIPanel deal={analyzingDeal} onClose={() => setAnalyzingDeal(null)} />}
+      {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
     </div>
   );
 }
