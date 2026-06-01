@@ -2,8 +2,8 @@
 import RSSParser from "rss-parser";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL || "MISSING";
-const supabaseKey = process.env.SUPABASE_ANON_KEY || "MISSING";
+const supabaseUrl = "https://wazffysnbmaavoshqpax.supabase.co/rest/v1/";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhemZmeXNuYm1hYXZvc2hxcGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDUyODAsImV4cCI6MjA5NTg4MTI4MH0.0ySZenKWRJdrfI5KP8giO6OnuBgx-CUuTsos2c-tXjs";
 const supabase = createClient(supabaseUrl, supabaseKey);
 const parser = new RSSParser();
 
