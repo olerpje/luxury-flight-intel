@@ -291,7 +291,7 @@ function AIPanel({ deal, onClose }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
+            model: "claude-sonnet-4-5",
             max_tokens: 1000,
             tools: [{ type: "web_search_20250305", name: "web_search" }],
             system: `You are an elite luxury travel analyst for a premium flight deals service. 
@@ -449,7 +449,7 @@ function SearchDeals({ onResults }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5",
           max_tokens: 1000,
           tools: [{ type: "web_search_20250305", name: "web_search" }],
           system: `You are a luxury flight deals researcher. Search for current business class and first class flight deals based on the user's query. 
