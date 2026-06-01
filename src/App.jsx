@@ -275,7 +275,36 @@ function SearchDeals({ onResults }) {
 export default function App() {
   const [region, setRegion] = useState("All Regions");
   const [cabin, setCabin] = useState("All Classes");
-  const [deals] = useState(SAMPLE_DEALS);
+  const [deals, setDeals] = useState(SAMPLE_DEALS);
+
+useEffect(() => {
+  fetch("/api/get-deals")
+    .then(r => r.json())
+    .then(data => {
+      if (data.deals && data.deals.length > 0) {
+        const formatted = data.deals.map(d => ({
+          id: d.id,
+          origin: d.origin,
+          originCity: d.origin_city,
+          dest: d.dest,
+          destCity: d.dest_city,
+          airline: d.airline,
+          cabin: d.cabin,
+          region: d.region,
+          normalPrice: d.normal_price,
+          dealPrice: d.deal_price,
+          savings: d.savings,
+          dates: d.dates,
+          seats: d.seats,
+          isError: d.is_error,
+          flag: d.flag,
+          expiresIn: d.expires_at,
+        }));
+        setDeals(formatted);
+      }
+    })
+    .catch(console.error);
+}, []);
   const [analyzingDeal, setAnalyzingDeal] = useState(null);
   const [searchDeals, setSearchDeals] = useState([]);
   const [showPricing, setShowPricing] = useState(false);
