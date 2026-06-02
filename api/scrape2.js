@@ -7,93 +7,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const RSS_FEEDS = [
   "https://www.secretflying.com/posts/feed/",
   "https://theflightdeal.com/feed/",
+  "https://www.flyertalk.com/forum/external.php?type=RSS2&forumids=1657",
+  "https://ausbt.com.au/feed",
 ];
-
-const CABIN_KEYWORDS = ["business", "first class", "business class", "lie-flat", "premium cabin", "biz class", "j class"];
-
-const AIRLINE_MAP = {
-  "emirates": "Emirates",
-  "qatar": "Qatar Airways",
-  "singapore": "Singapore Airlines",
-  "lufthansa": "Lufthansa",
-  "british airways": "British Airways",
-  "air france": "Air France",
-  "klm": "KLM",
-  "united": "United Airlines",
-  "delta": "Delta",
-  "american": "American Airlines",
-  "cathay": "Cathay Pacific",
-  "etihad": "Etihad Airways",
-  "ana": "ANA",
-  "jal": "Japan Airlines",
-  "turkish": "Turkish Airlines",
-  "virgin": "Virgin Atlantic",
-};
-
-const REGION_MAP = {
-  "london": "Europe", "paris": "Europe", "amsterdam": "Europe", "frankfurt": "Europe",
-  "dubai": "Middle East", "abu dhabi": "Middle East", "doha": "Middle East",
-  "singapore": "Asia & Pacific", "tokyo": "Asia & Pacific", "hong kong": "Asia & Pacific",
-  "sydney": "Asia & Pacific", "bangkok": "Asia & Pacific", "delhi": "Asia & Pacific",
-  "new york": "North America", "los angeles": "North America", "chicago": "North America",
-  "miami": "North America", "toronto": "North America",
-  "sao paulo": "Latin America", "buenos aires": "Latin America", "bogota": "Latin America",
-  "johannesburg": "Africa", "nairobi": "Africa", "cairo": "Africa",
-};
-
-const FLAG_MAP = {
-  "london": "🇬🇧", "paris": "🇫🇷", "amsterdam": "🇳🇱", "frankfurt": "🇩🇪",
-  "dubai": "🇦🇪", "doha": "🇶🇦", "singapore": "🇸🇬", "tokyo": "🇯🇵",
-  "hong kong": "🇭🇰", "sydney": "🇦🇺", "bangkok": "🇹🇭", "delhi": "🇮🇳",
-  "new york": "🇺🇸", "los angeles": "🇺🇸", "toronto": "🇨🇦",
-};
-
-function extractPrice(text) {
-  const patterns = [/\$(\d[\d,]+)/g, /USD\s?(\d[\d,]+)/gi, /from\s*\$(\d[\d,]+)/gi];
-  for (const p of patterns) {
-    const match = text.match(p);
-    if (match) {
-      const num = parseInt(match[0].replace(/[^0-9]/g, ""));
-      if (num > 100 && num < 15000) return num;
-    }
-  }
-  return null;
-}
-
-function isCabinDeal(text) {
-  const lower = text.toLowerCase();
-  return CABIN_KEYWORDS.some(k => lower.includes(k));
-}
-
-function getCabin(text) {
-  const lower = text.toLowerCase();
-  if (lower.includes("first class") || lower.includes("first-class")) return "First Class";
-  return "Business Class";
-}
-
-function getAirline(text) {
-  const lower = text.toLowerCase();
-  for (const [key, val] of Object.entries(AIRLINE_MAP)) {
-    if (lower.includes(key)) return val;
-  }
-  return "Various Airlines";
-}
-
-function getRegion(text) {
-  const lower = text.toLowerCase();
-  for (const [key, val] of Object.entries(REGION_MAP)) {
-    if (lower.includes(key)) return val;
-  }
-  return "Various";
-}
-
-function getFlag(text) {
-  const lower = text.toLowerCase();
-  for (const [key, val] of Object.entries(FLAG_MAP)) {
-    if (lower.includes(key)) return val;
-  }
-  return "✈️";
-}
 
 async function fetchFeed(url) {
   const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
@@ -104,54 +20,107 @@ async function fetchFeed(url) {
     const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/))?.[1] || "";
     const link = (item.match(/<link>(.*?)<\/link>/))?.[1] || "";
     const desc = (item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) || item.match(/<description>(.*?)<\/description>/))?.[1] || "";
-    items.push({ title, link, description: desc });
+    if (title) items.push({ title, link, description: desc.replace(/<[^>]*>/g, "").slice(0, 500) });
   }
   return items;
 }
 
+async function extractDealsWithAI(items) {
+  const content = items.map(i => `TITLE: ${i.title}\nDESC: ${i.description}\nLINK: ${i.link}`).join("\n\n---\n\n");
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "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",
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2000,
+      system: `You are a flight deal extractor. Extract ONLY business class and first class flight deals from the content.
+Rules:
+- Include deals with € EUR prices too, convert to USD (multiply by 1.1)
+- Include deals that mention "lie-flat", "business", "first class", "biz"
+- Be generous in extraction - if it sounds like a premium cabin deal, include it
+- Estimate normal_price as 3x the deal_price if not mentioned
+- For origin/dest, use the cities mentioned or make reasonable guesses based on context
+
+Return a JSON array. Each deal must have:
+{
+  "origin": "IATA code",
+  "origin_city": "City name",
+  "dest": "IATA code",
+  "dest_city": "City name", 
+  "airline": "Airline name or Various Airlines",
+  "cabin": "Business Class" or "First Class",
+  "region": one of ["North America","Europe","Asia & Pacific","Middle East","Latin America","Africa"],
+  "normal_price": number in USD,
+  "deal_price": number in USD,
+  "savings": number percentage,
+  "dates": "Flexible dates",
+  "seats": 5,
+  "is_error": boolean,
+  "flag": "emoji flag of destination",
+  "expires_at": "48h",
+  "source_url": "the link"
+}
+Return ONLY valid JSON array, no markdown, no explanation.`,
+      messages: [{
+        role: "user",
+        content: `Extract all business and first class flight deals from these posts:\n\n${content}`
+      }]
+    })
+  });
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text || "[]";
+console.log("Claude response:", text.slice(0, 500));
+  const clean = text.replace(/```json|```/g, "").trim();
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    console.error("JSON parse error:", clean.slice(0, 200));
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
+   {
+  const testItems = [{
+    title: "ERROR FARE ⚠️ Business Class from Spanish cities to Mexico City, Mexico from only €496 one-way (lie-flat seats)",
+    link: "https://secretflying.com/test",
+    description: "Fly business class from Madrid or Barcelona to Mexico City for just €496 one way on Iberia. Lie-flat seats included."
+  }];
+  const deals = await extractDealsWithAI(testItems);
+  return res.status(200).json({ test: true, deals });
+}
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const deals = [];
+  const allDeals = [];
 
   for (const feedUrl of RSS_FEEDS) {
     try {
       const items = await fetchFeed(feedUrl);
-      for (const item of items.slice(0, 30)) {
-        const text = `${item.title} ${item.description}`;
-        if (!isCabinDeal(text)) continue;
-        const price = extractPrice(text);
-        if (!price) continue;
+      if (items.length === 0) continue;
 
-        deals.push({
-          origin: "Various",
-          origin_city: "Various",
-          dest: "Various",
-          dest_city: "Various",
-          airline: getAirline(text),
-          cabin: getCabin(text),
-          region: getRegion(text),
-          normal_price: Math.round(price * 3.2),
-          deal_price: price,
-          savings: 69,
-          dates: "Flexible dates",
-          seats: Math.floor(Math.random() * 6) + 1,
-          is_error: text.toLowerCase().includes("error") || text.toLowerCase().includes("mistake"),
-          flag: getFlag(text),
-          expires_at: "48h",
-          source_url: item.link || feedUrl,
-        });
+      const deals = await extractDealsWithAI(items.slice(0, 20));
+
+      for (const deal of deals) {
+        if (deal.origin && deal.dest && deal.deal_price) {
+          allDeals.push(deal);
+        }
       }
     } catch (e) {
-      console.error("Feed error:", feedUrl, e.message);
+      console.error("Error:", e.message);
     }
   }
 
-  if (deals.length > 0) {
-    const { error } = await supabase.from("deals").insert(deals);
+  if (allDeals.length > 0) {
+    const { error } = await supabase.from("deals").insert(allDeals);
     if (error) return res.status(500).json({ error: error.message });
   }
 
-  res.status(200).json({ scraped: deals.length, deals });
+  res.status(200).json({ scraped: allDeals.length, deals: allDeals });
 }

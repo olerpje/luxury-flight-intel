@@ -277,7 +277,8 @@ function DealCard({ deal, onAnalyze, onSubscribe }) {
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#c9a84c"; }}>
           AI ANALYSIS
         </button>
-        <button onClick={onSubscribe} style={{ flex: 2, background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}
+        <button onClick={() => deal.sourceUrl ? window.open(deal.sourceUrl, "_blank") : window.open(`https://www.google.com/flights?hl=en#flt=${deal.origin}.${deal.dest}`, "_blank")}
+          style={{ flex: 2, background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}
           onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
           onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
           BOOK NOW →
@@ -435,7 +436,7 @@ export default function App() {
             dest: d.dest, destCity: d.dest_city, airline: d.airline,
             cabin: d.cabin, region: d.region, normalPrice: d.normal_price,
             dealPrice: d.deal_price, savings: d.savings, dates: d.dates,
-            seats: d.seats, isError: d.is_error, flag: d.flag, expiresIn: d.expires_at,
+            seats: d.seats, isError: d.is_error, flag: d.flag, expiresIn: d.expires_at, sourceUrl: d.source_url,
           }));
           setDeals(formatted);
         }
