@@ -1,4 +1,10 @@
 import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  "https://wazffysnbmaavoshqpax.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhemZmeXNuYm1hYXZvc2hxcGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDUyODAsImV4cCI6MjA5NTg4MTI4MH0.0ySZenKWRJdrfI5KP8giO6OnuBgx-CUuTsos2c-tXjs"
+);
 
 const REGIONS = ["All Regions", "North America", "Europe", "Asia & Pacific", "Middle East", "Latin America", "Africa"];
 const CABINS = ["All Classes", "Business Class", "First Class", "Premium Economy"];
@@ -28,16 +34,88 @@ function TickerBar() {
   );
 }
 
-function PricingModal({ onClose }) {
+function AuthModal({ onClose, onLogin }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleSubmit() {
+    setLoading(true);
+    setMessage("");
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setMessage("Check your email to confirm your account!");
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        onLogin(data.user);
+        onClose();
+      }
+    } catch (e) {
+      setMessage(e.message);
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: "#0f0f0f", border: "1px solid #c9a84c44", borderRadius: "2px", width: "100%", maxWidth: "400px", padding: "40px" }}>
+        <div style={{ textAlign: "center", marginBottom: "32px" }}>
+          <div style={{ fontSize: "10px", color: "#c9a84c", letterSpacing: "0.2em", marginBottom: "8px" }}>LUXURY FLIGHT INTEL</div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#f0ece4" }}>
+            {mode === "login" ? "Welcome Back" : "Create Account"}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <input value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="Email address"
+            style={{ background: "#141414", border: "1px solid #2a2a2a", color: "#f0ece4", padding: "12px 16px", fontSize: "13px", outline: "none", fontFamily: "Georgia, serif" }} />
+          <input value={password} onChange={e => setPassword(e.target.value)}
+            type="password" placeholder="Password"
+            onKeyDown={e => e.key === "Enter" && handleSubmit()}
+            style={{ background: "#141414", border: "1px solid #2a2a2a", color: "#f0ece4", padding: "12px 16px", fontSize: "13px", outline: "none", fontFamily: "Georgia, serif" }} />
+
+          {message && <div style={{ fontSize: "12px", color: message.includes("Check") ? "#4ade80" : "#ef4444", textAlign: "center" }}>{message}</div>}
+
+          <button onClick={handleSubmit} disabled={loading}
+            style={{ background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "12px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer", marginTop: "8px" }}>
+            {loading ? "LOADING..." : mode === "login" ? "SIGN IN →" : "CREATE ACCOUNT →"}
+          </button>
+
+          <div style={{ textAlign: "center", fontSize: "12px", color: "#555", marginTop: "8px" }}>
+            {mode === "login" ? (
+              <span>No account? <span style={{ color: "#c9a84c", cursor: "pointer" }} onClick={() => setMode("signup")}>Sign up free</span></span>
+            ) : (
+              <span>Already have one? <span style={{ color: "#c9a84c", cursor: "pointer" }} onClick={() => setMode("login")}>Sign in</span></span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PricingModal({ onClose, user }) {
   const [loading, setLoading] = useState(null);
 
   async function subscribe(priceId, plan) {
+    if (!user) {
+      alert("Please sign in or create an account first!");
+      onClose();
+      return;
+    }
     setLoading(plan);
     try {
       const res = await fetch("/api/stripe-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ priceId, email: user.email }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
@@ -139,10 +217,6 @@ function LockedCard({ deal, onSubscribe }) {
         <div style={{ display: "flex", gap: "16px", fontSize: "11px", color: "#555" }}>
           <span>📅 {deal.dates}</span>
           <span>💺 {deal.seats} seats left</span>
-        </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <div style={{ flex: 1, background: "#222", height: "36px", borderRadius: "2px" }} />
-          <div style={{ flex: 2, background: "#333", height: "36px", borderRadius: "2px" }} />
         </div>
       </div>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(10,10,10,0.7)", gap: "12px" }}>
@@ -324,6 +398,32 @@ export default function App() {
   const [analyzingDeal, setAnalyzingDeal] = useState(null);
   const [searchDeals, setSearchDeals] = useState([]);
   const [showPricing, setShowPricing] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [user, setUser] = useState(null);
+  const [userPlan, setUserPlan] = useState("free");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        loadUserPlan(session.user.email);
+      }
+    });
+    supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        loadUserPlan(session.user.email);
+      } else {
+        setUser(null);
+        setUserPlan("free");
+      }
+    });
+  }, []);
+
+  async function loadUserPlan(email) {
+    const { data } = await supabase.from("subscribers").select("plan").eq("email", email).single();
+    if (data) setUserPlan(data.plan);
+  }
 
   useEffect(() => {
     fetch("/api/get-deals")
@@ -351,13 +451,26 @@ export default function App() {
     }
   }, []);
 
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserPlan("free");
+  }
+
+  const canSeeBusiness = userPlan === "pro" || userPlan === "elite";
+  const canSeeFirstClass = userPlan === "elite";
+
+  const isLocked = (deal) => {
+    if (deal.cabin === "First Class") return !canSeeFirstClass;
+    if (deal.cabin === "Business Class") return !canSeeBusiness;
+    return false;
+  };
+
   const allDeals = [...searchDeals, ...deals];
   const filtered = allDeals.filter(d =>
     (region === "All Regions" || d.region === region) &&
     (cabin === "All Classes" || d.cabin === cabin)
   );
-
-  const isLocked = (deal) => deal.cabin === "Business Class" || deal.cabin === "First Class";
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
@@ -379,10 +492,20 @@ export default function App() {
           <div style={{ fontSize: "10px", letterSpacing: "0.25em", color: "#c9a84c", marginBottom: "2px" }}>✦ EXCLUSIVE ✦</div>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "26px", letterSpacing: "0.05em" }}>LUXURY FLIGHT INTEL</div>
         </div>
-        <div style={{ display: "flex", gap: "24px", fontSize: "11px", letterSpacing: "0.1em", color: "#555" }}>
-          <span style={{ cursor: "pointer" }}>ABOUT</span>
+        <div style={{ display: "flex", gap: "16px", fontSize: "11px", letterSpacing: "0.1em", color: "#555", alignItems: "center" }}>
           <span style={{ cursor: "pointer", color: "#c9a84c" }} onClick={() => setShowPricing(true)}>PRICING</span>
-          <span style={{ border: "1px solid #c9a84c", color: "#c9a84c", padding: "6px 16px", cursor: "pointer" }} onClick={() => setShowPricing(true)}>SUBSCRIBE</span>
+          {user ? (
+            <>
+              <span style={{ color: "#c9a84c" }}>{userPlan.toUpperCase()}</span>
+              <span style={{ color: "#888", fontSize: "11px" }}>{user.email}</span>
+              <span style={{ border: "1px solid #333", color: "#555", padding: "6px 16px", cursor: "pointer" }} onClick={handleSignOut}>SIGN OUT</span>
+            </>
+          ) : (
+            <>
+              <span style={{ cursor: "pointer" }} onClick={() => setShowAuth(true)}>SIGN IN</span>
+              <span style={{ border: "1px solid #c9a84c", color: "#c9a84c", padding: "6px 16px", cursor: "pointer" }} onClick={() => setShowPricing(true)}>SUBSCRIBE</span>
+            </>
+          )}
         </div>
       </header>
 
@@ -438,7 +561,8 @@ export default function App() {
       </footer>
 
       {analyzingDeal && <AIPanel deal={analyzingDeal} onClose={() => setAnalyzingDeal(null)} />}
-      {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
+      {showPricing && <PricingModal onClose={() => setShowPricing(false)} user={user} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} onLogin={setUser} />}
     </div>
   );
 }

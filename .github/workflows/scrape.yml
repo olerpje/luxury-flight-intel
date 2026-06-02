@@ -1,0 +1,15 @@
+name: Hourly Flight Deal Scraper
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scraper
+        run: |
+          curl -X GET "https://luxury-flight-intel-woh6.vercel.app/api/scrape2" \
+          -H "Content-Type: application/json"
