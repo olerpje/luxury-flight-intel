@@ -32,7 +32,7 @@ async function extractDealsWithAI(items) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": "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",
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
