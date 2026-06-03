@@ -6,8 +6,21 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const RSS_FEEDS = [
   "https://www.secretflying.com/posts/feed/",
+  "https://www.holidaypirates.com/feed/",
+  "https://seats.aero/blog/rss.xml",
+  "https://upgradedpoints.com/feed/",
+  "https://onemileatatime.com/feed/",
+  "https://premium-flights.com/feed/", 
+  "https://going.com/feed/",
+  "https://grandroyaltravel.com/feed/",
+  "https://flyertalk/com/forum/external.php?type=RSS2&forumids=1657",
+  "https://airfarewatchdog.com/rss/1.0/airfarewatchdog.xml",
+  "https://passportpremiere.com/feed/",
+  "https://dollarflightsclub.com/feed/",
   "https://theflightdeal.com/feed/",
-  "https://www.flyertalk.com/forum/external.php?type=RSS2&forumids=1657",
+  "https://thepointsguy.com/feed/",
+  "https://flyertalk.com/forum/external.php?type=RSS2&forumids=1657",
+  "https://www.premiumeconomydeals.com/feed/",
   "https://ausbt.com.au/feed",
 ];
 
@@ -40,18 +53,17 @@ async function extractDealsWithAI(items) {
       max_tokens: 2000,
       system: `You are a flight deal extractor. Extract ONLY business class and first class flight deals from the content.
 Rules:
-- Include deals with € EUR prices too, convert to USD (multiply by 1.1)
-- Include deals that mention "lie-flat", "business", "first class", "biz"
-- Be generous in extraction - if it sounds like a premium cabin deal, include it
+- Include deals with EUR prices, convert to USD by multiplying by 1.1
+- Include deals that mention lie-flat, business, first class, biz
 - Estimate normal_price as 3x the deal_price if not mentioned
-- For origin/dest, use the cities mentioned or make reasonable guesses based on context
+- For origin/dest use cities mentioned or make reasonable guesses
 
 Return a JSON array. Each deal must have:
 {
   "origin": "IATA code",
   "origin_city": "City name",
   "dest": "IATA code",
-  "dest_city": "City name", 
+  "dest_city": "City name",
   "airline": "Airline name or Various Airlines",
   "cabin": "Business Class" or "First Class",
   "region": one of ["North America","Europe","Asia & Pacific","Middle East","Latin America","Africa"],
@@ -75,7 +87,6 @@ Return ONLY valid JSON array, no markdown, no explanation.`,
 
   const data = await response.json();
   const text = data.content?.[0]?.text || "[]";
-console.log("Claude response:", text.slice(0, 500));
   const clean = text.replace(/```json|```/g, "").trim();
   try {
     return JSON.parse(clean);
@@ -87,15 +98,6 @@ console.log("Claude response:", text.slice(0, 500));
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-   {
-  const testItems = [{
-    title: "ERROR FARE ⚠️ Business Class from Spanish cities to Mexico City, Mexico from only €496 one-way (lie-flat seats)",
-    link: "https://secretflying.com/test",
-    description: "Fly business class from Madrid or Barcelona to Mexico City for just €496 one way on Iberia. Lie-flat seats included."
-  }];
-  const deals = await extractDealsWithAI(testItems);
-  return res.status(200).json({ test: true, deals });
-}
   if (req.method === "OPTIONS") return res.status(200).end();
 
   const allDeals = [];
@@ -104,9 +106,7 @@ export default async function handler(req, res) {
     try {
       const items = await fetchFeed(feedUrl);
       if (items.length === 0) continue;
-
       const deals = await extractDealsWithAI(items.slice(0, 20));
-
       for (const deal of deals) {
         if (deal.origin && deal.dest && deal.deal_price) {
           allDeals.push(deal);
@@ -120,6 +120,18 @@ export default async function handler(req, res) {
   if (allDeals.length > 0) {
     const { error } = await supabase.from("deals").insert(allDeals);
     if (error) return res.status(500).json({ error: error.message });
+  }
+
+ if (allDeals.length > 0) {
+    try {
+      await fetch("https://luxury-flight-intel-woh6.vercel.app/api/send-alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deals: allDeals }),
+      });
+    } catch (e) {
+      console.error("Email alert error:", e.message);
+    }
   }
 
   res.status(200).json({ scraped: allDeals.length, deals: allDeals });

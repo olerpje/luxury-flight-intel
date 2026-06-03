@@ -9,19 +9,10 @@ const supabase = createClient(
 const REGIONS = ["All Regions", "North America", "Europe", "Asia & Pacific", "Middle East", "Latin America", "Africa"];
 const CABINS = ["All Classes", "Business Class", "First Class", "Premium Economy"];
 
-const PRO_PRICE_ID = "price_1TdVArEcQx0DO13we6UF5sf8";
-const ELITE_PRICE_ID = "price_1TdTCxEcQx0DO13wlxlp9gOe";
+const PRO_PRICE_ID = "price_1Te9eUEcQx0DO13wzprd8YWs";
+const ELITE_PRICE_ID = "price_1Te9e0EcQx0DO13wvZwu1TGR";
 
-const SAMPLE_DEALS = [
-  { id: 1, origin: "AMS", originCity: "Amsterdam", dest: "BKK", destCity: "Bangkok", airline: "Qatar Airways", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 4200, dealPrice: 1845, savings: 56, dates: "Sep 15 – Oct 10", seats: 4, isError: false, flag: "🇹🇭", expiresIn: "1d 12h" },
-  { id: 2, origin: "CDG", originCity: "Paris", dest: "BKK", destCity: "Bangkok", airline: "Etihad Airways", cabin: "First Class", region: "Asia & Pacific", normalPrice: 8500, dealPrice: 3780, savings: 55, dates: "Nov 03 – Nov 18", seats: 2, isError: false, flag: "🇹🇭", expiresIn: "8h 45m" },
-  { id: 3, origin: "YYZ", originCity: "Toronto", dest: "CDG", destCity: "Paris", airline: "Air France", cabin: "Business Class", region: "Europe", normalPrice: 5100, dealPrice: 2315, savings: 54, dates: "Oct 12 – Oct 26", seats: 5, isError: false, flag: "🇫🇷", expiresIn: "2d 0h" },
-  { id: 4, origin: "LIS", originCity: "Lisbon", dest: "DEL", destCity: "Delhi", airline: "Air India", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 3800, dealPrice: 1490, savings: 60, dates: "Sep 22 – Oct 08", seats: 3, isError: false, flag: "🇮🇳", expiresIn: "14h 20m" },
-  { id: 5, origin: "LUX", originCity: "Luxembourg", dest: "MNL", destCity: "Manila", airline: "Lufthansa", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 4600, dealPrice: 1850, savings: 59, dates: "Oct 05 – Oct 20", seats: 3, isError: true, flag: "🇵🇭", expiresIn: "4h 15m" },
-  { id: 6, origin: "VIE", originCity: "Vienna", dest: "BOM", destCity: "Mumbai", airline: "Air France", cabin: "Business Class", region: "Asia & Pacific", normalPrice: 3400, dealPrice: 1120, savings: 67, dates: "Jan 10 – Jan 25", seats: 1, isError: true, flag: "🇮🇳", expiresIn: "1h 05m" },
-  { id: 7, origin: "AMS", originCity: "Amsterdam", dest: "NYC", destCity: "New York", airline: "Delta", cabin: "Premium Economy", region: "North America", normalPrice: 1200, dealPrice: 480, savings: 60, dates: "Oct 01 – Oct 15", seats: 8, isError: false, flag: "🇺🇸", expiresIn: "3d 0h" },
-  { id: 8, origin: "LHR", originCity: "London", dest: "BCN", destCity: "Barcelona", airline: "Iberia", cabin: "Premium Economy", region: "Europe", normalPrice: 900, dealPrice: 310, savings: 65, dates: "Nov 10 – Nov 20", seats: 6, isError: false, flag: "🇪🇸", expiresIn: "5d 0h" },
-];
+const SAMPLE_DEALS = [];
 
 function TickerBar() {
   const items = ["🔥 ERROR FARE: Emirates First Class LHR→DXB — $2,100 (78% off)", "⚡ NEW: Singapore Airlines Biz JFK→SIN — $1,890", "🚨 LAST SEAT: Qantas First SYD→JFK — $3,200", "💺 British Airways Biz JFK→LHR — $1,290 (73% off)", "🌏 Air France Biz CDG→NRT — €1,650"];
@@ -154,7 +145,7 @@ function PricingModal({ onClose, user }) {
           <div style={{ border: "1px solid #c9a84c", padding: "28px", borderRadius: "2px", position: "relative" }}>
             <div style={{ position: "absolute", top: 0, right: 0, background: "#c9a84c", color: "#0a0a0a", fontSize: "9px", fontWeight: "800", padding: "4px 10px", letterSpacing: "0.1em" }}>POPULAR</div>
             <div style={{ fontSize: "10px", color: "#c9a84c", letterSpacing: "0.15em", marginBottom: "8px" }}>PRO</div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#c9a84c" }}>€9</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#c9a84c" }}>€19</div>
             <div style={{ fontSize: "11px", color: "#555", marginBottom: "20px" }}>per month</div>
             <div style={{ fontSize: "12px", color: "#888", lineHeight: "2" }}>
               ✦ All Business Class deals<br />
@@ -171,7 +162,7 @@ function PricingModal({ onClose, user }) {
           <div style={{ border: "1px solid #444", padding: "28px", borderRadius: "2px", gridColumn: "1 / -1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: "10px", color: "#888", letterSpacing: "0.15em", marginBottom: "4px" }}>ELITE</div>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#f0ece4" }}>€17 <span style={{ fontSize: "13px", color: "#555" }}>/ month</span></div>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#f0ece4" }}>€49 <span style={{ fontSize: "13px", color: "#555" }}>/ month</span></div>
               <div style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>Everything in Pro + First Class deals + error fares first + SMS alerts</div>
             </div>
             <button onClick={() => subscribe(ELITE_PRICE_ID, "elite")} disabled={loading === "elite"}
@@ -277,7 +268,10 @@ function DealCard({ deal, onAnalyze, onSubscribe }) {
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#c9a84c"; }}>
           AI ANALYSIS
         </button>
-        <button onClick={() => deal.sourceUrl ? window.open(deal.sourceUrl, "_blank") : window.open(`https://www.google.com/flights?hl=en#flt=${deal.origin}.${deal.dest}`, "_blank")}
+        <button onClick={() => {
+  const url = `https://www.google.com/flights#flt=${deal.origin}.${deal.dest}.;c:EUR;e:1;sd:1;t:f`;
+  window.open(url, "_blank");
+}}
           style={{ flex: 2, background: "#c9a84c", border: "none", color: "#0a0a0a", padding: "10px", fontSize: "11px", fontWeight: "800", letterSpacing: "0.1em", cursor: "pointer" }}
           onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
           onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
@@ -395,7 +389,7 @@ function SearchDeals({ onResults }) {
 export default function App() {
   const [region, setRegion] = useState("All Regions");
   const [cabin, setCabin] = useState("All Classes");
-  const [deals, setDeals] = useState(SAMPLE_DEALS);
+  const [deals, setDeals] = useState([]);
   const [analyzingDeal, setAnalyzingDeal] = useState(null);
   const [searchDeals, setSearchDeals] = useState([]);
   const [showPricing, setShowPricing] = useState(false);
